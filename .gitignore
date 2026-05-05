@@ -1,0 +1,21 @@
+# Compiled binaries
+/dust
+/build/
+*.exe
+
+# Generated artifacts
+/completions/
+/dist/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local Claude Code state
+.claude/
+
+# Test coverage
+*.out
+coverage.txt
