@@ -24,6 +24,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case scanAllMsg:
 		m.categories = msg.categories
 		m.scanning = false
+		m.firstScan = false
 		// Land on the first category with visible items under the current filter.
 		for i, c := range m.categories {
 			if categoryVisible(c, m.showEmpty) {
@@ -93,7 +94,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case runAllDoneMsg:
 		m.screen = screenDone
-		// Re-scan so the list reflects post-clean sizes.
+		// Skip the rescan after a dry-run — nothing was deleted, so sizes
+		// haven't changed. Rescanning would just make the user wait for no
+		// reason.
+		if m.dryRun {
+			return m, nil
+		}
+		// Real clean — refresh sizes so the list reflects post-clean state.
 		m.scanning = true
 		m.scanStart = time.Now()
 		return m, scanAllCmd()
@@ -136,6 +143,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case key.Matches(msg, m.keys.Refresh):
 		m.scanning = true
+		m.scanStart = time.Now()
 		return m, scanAllCmd()
 	case key.Matches(msg, m.keys.DryRun):
 		m.dryRun = !m.dryRun

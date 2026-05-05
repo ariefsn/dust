@@ -4,7 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.1] - 2026-05-05
+
+### Fixed
+
+- **`js/npm` now wipes the whole `~/.npm` tree.** Previously dust shelled out
+  to `npm cache clean --force`, which only clears `~/.npm/_cacache` and
+  leaves `_libvips/`, `_npx/`, `_prebuilds/`, `_logs/` (often gigabytes)
+  behind. The result was a misleading "freed 5 KiB" after clean even
+  though scan still reported gigabytes. dust now path-deletes the whole
+  `~/.npm` directory so `scan` and `clean` agree.
+- **TUI rescan no longer says "initial scan can take 10–30s"** when it's
+  actually a refresh. The placeholder now reads "Refreshing sizes..." and
+  the elapsed timer resets to 0 on each rescan.
+- **TUI dry-run skips the post-clean rescan.** Nothing was deleted, so
+  rescanning was wasted work and made dry-runs feel sluggish.
+- **TUI done screen shows a per-cleaner breakdown** of what was (or would
+  have been) freed, not just the total. Lists each item with `✓` / `~` /
+  `✗` and the bytes freed.
 
 ## [0.1.0] - 2026-05-05
 
@@ -88,5 +105,5 @@ Initial public release.
 - Time Machine snapshot scan reports count, not bytes — APFS snapshots are
   sparse and don't have a single "size" we can cheaply compute.
 
-[Unreleased]: https://github.com/ariefsn/dust/compare/v0.1.0...HEAD
+[0.1.1]: https://github.com/ariefsn/dust/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ariefsn/dust/releases/tag/v0.1.0

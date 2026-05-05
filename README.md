@@ -316,23 +316,23 @@ Device backups under `~/Library/Application Support/MobileSync/Backup`.
 
 ### Project scanner
 
-Detects projects by manifest, then either runs the kind's clean tool or path-deletes its known artifact dirs.
+Detects projects by manifest. With `--prefer-tool=true` (the default) dust runs the canonical clean tool when it's available on `$PATH`; otherwise it falls back to a path-delete of the kind's artifact directories.
 
-| Manifest | Kind | Tool clean | Path-delete fallback |
-|---|---|---|---|
-| `package.json` | Node | — | `node_modules`, `.next`, `.nuxt`, `.svelte-kit`, `dist`, `build`, `.parcel-cache`, `.turbo`, `.cache` |
-| `pubspec.yaml` | Flutter | `flutter clean` | `build`, `.dart_tool`, `ephemeral`, `ios/Pods` |
-| `Cargo.toml` | Rust | `cargo clean` | `target` |
-| `pom.xml` | Maven | `mvn clean` | `target` |
-| `build.gradle[.kts]` | Gradle | `./gradlew clean` | `build`, `.gradle` |
-| `*.csproj` / `*.sln` | .NET | `dotnet clean` | `bin`, `obj` |
-| `Podfile` | iOS (CocoaPods) | — | `Pods` |
-| `go.mod` | Go | `go clean` | `vendor` |
-| `pyproject.toml` / `requirements.txt` / `setup.py` | Python | — | `.venv`, `venv`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `build`, `dist`, `*.egg-info` |
-| `composer.json` | PHP | — | `vendor` |
-| `Gemfile` | Ruby | `bundle clean --force` | `.bundle`, `vendor/bundle` |
+| Manifest | Kind | What gets cleaned |
+|---|---|---|
+| `package.json` | **Node** | `rm -r` of: `node_modules`, `.next`, `.nuxt`, `.svelte-kit`, `dist`, `build`, `.parcel-cache`, `.turbo`, `.cache` |
+| `pubspec.yaml` | **Flutter** | `flutter clean` (which removes `build/`, `.dart_tool/`, `ephemeral/`, `ios/Pods/`) |
+| `Cargo.toml` | **Rust** | `cargo clean` (removes `target/`) |
+| `pom.xml` | **Maven** | `mvn clean -q` (removes `target/`) |
+| `build.gradle[.kts]` | **Gradle** | `./gradlew clean` if the wrapper is present, else `gradle clean` (removes `build/`, `.gradle/`) |
+| `*.csproj` / `*.sln` | **.NET** | `dotnet clean` (removes `bin/`, `obj/`) |
+| `Podfile` | **iOS (CocoaPods)** | `rm -r Pods/` *(no tool action)* |
+| `go.mod` | **Go** | `go clean` |
+| `pyproject.toml` / `requirements.txt` / `setup.py` | **Python** | `rm -r` of: `.venv`, `venv`, `__pycache__`, `.pytest_cache`, `.mypy_cache`, `.ruff_cache`, `build`, `dist`, `*.egg-info` |
+| `composer.json` | **PHP** | `rm -r vendor/` |
+| `Gemfile` | **Ruby** | `bundle clean --force` (removes `.bundle/`, `vendor/bundle/`) |
 
-A single project may match multiple kinds (a Flutter app with `pubspec.yaml` *and* `Podfile` for iOS gets both treatments).
+A single project may match multiple kinds — e.g. a Flutter app with both `pubspec.yaml` and a `Podfile` gets `flutter clean` *and* the CocoaPods cleanup. Source files, lock files (`package-lock.json`, `Cargo.lock`, `pubspec.lock`, …), `.git/`, `.env`, and IDE settings (`.vscode/`, `.idea/`) are never touched. Projects with uncommitted git changes are skipped by default — pass `--include-dirty` (CLI) to override.
 
 ---
 
