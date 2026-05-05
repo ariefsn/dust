@@ -81,7 +81,8 @@ type Model struct {
 	focus      focus
 	screen     screen
 
-	scanning  bool // true while initial cache scan in progress
+	scanning  bool // true while a cache scan (initial or refresh) is in progress
+	firstScan bool // true until the first scan completes — only then is it a "rescan"
 	scanStart time.Time
 
 	// Project scanner state — runs in parallel with the cache scan when enabled.
@@ -127,6 +128,7 @@ func NewWithFullOpts(o Options) Model {
 		focus:            focusCategories,
 		screen:           screenList,
 		scanning:         true,
+		firstScan:        true,
 		scanStart:        time.Now(),
 		verbose:          o.Verbose,
 		includeProjects:  o.IncludeProjects,

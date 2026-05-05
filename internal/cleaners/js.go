@@ -60,7 +60,12 @@ func yarnCacheDir() string {
 	return cleaner.Expand("~/.cache/yarn")
 }
 
-// NPM — `npm cache clean --force` if available, else wipe ~/.npm.
+// NPM — wipe ~/.npm. We deliberately path-delete instead of running
+// `npm cache clean --force`: the tool only clears `_cacache/` but leaves
+// `_libvips/`, `_npx/`, `_prebuilds/`, `_logs/`, etc. behind, often
+// gigabytes of cruft that scan reports but clean doesn't free. The dust
+// contract is "what scan reports is what clean frees", so we wipe the
+// whole tree. npm recreates anything it needs on next run.
 func NPM() cleaner.Cleaner {
 	return pathBased{
 		id:       "js/npm",
@@ -72,8 +77,7 @@ func NPM() cleaner.Cleaner {
 		availableExtra: func(ctx context.Context) bool {
 			return cleaner.LookPath("npm")
 		},
-		tool:     "npm",
-		toolArgs: []string{"cache", "clean", "--force"},
+		// No `tool:` — falls through to path-delete via SafeRemoveAll.
 	}
 }
 

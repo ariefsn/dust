@@ -80,11 +80,18 @@ func (m Model) View() string {
 
 func (m Model) renderScanning() string {
 	elapsed := formatElapsed(time.Since(m.scanStart))
-	return fmt.Sprintf("\n  %s\n  %s Scanning all caches in parallel... %s\n  %s\n",
+	verb := "Scanning all caches in parallel..."
+	hint := "initial scan can take 10–30s depending on cache sizes"
+	if !m.firstScan {
+		verb = "Refreshing sizes..."
+		hint = "rescanning every cleaner — usually a few seconds"
+	}
+	return fmt.Sprintf("\n  %s\n  %s %s %s\n  %s\n",
 		titleStyle.Render(" dust "),
 		cursorStyle.Render(spinnerFrame()),
+		verb,
 		dimStyle.Render("("+elapsed+")"),
-		dimStyle.Render("initial scan can take 10–30s depending on cache sizes"),
+		dimStyle.Render(hint),
 	)
 }
 
@@ -406,16 +413,50 @@ func (m Model) renderDone() string {
 	if m.dryRun {
 		verb = "[dry-run] Would have freed"
 	}
-	body := fmt.Sprintf("%s %s across %d cleaner(s).",
+	header := fmt.Sprintf("%s %s across %d cleaner(s).",
 		verb,
 		sizeStyle.Render(cleaner.HumanBytes(totalFreed)),
 		len(m.runResults)-failures,
 	)
 	if failures > 0 {
-		body += "\n" + errStyle.Render(fmt.Sprintf("%d cleaner(s) failed.", failures))
+		header += "\n  " + errStyle.Render(fmt.Sprintf("%d cleaner(s) failed.", failures))
 	}
-	body += "\n\n" + dimStyle.Render("Press any key to continue.")
-	return "\n  " + titleStyle.Render(" dust ") + "\n\n  " + body
+
+	// Per-cleaner breakdown — useful especially in dry-run, where the rescan
+	// is skipped so this is the user's only feedback on what would happen.
+	var rows []string
+	for _, r := range m.runResults {
+		name := m.lookupName(r.itemID)
+		var line string
+		switch {
+		case r.err != nil:
+			line = fmt.Sprintf("  %s %s — %v", errStyle.Render("✗"), name, r.err)
+		case m.dryRun:
+			line = fmt.Sprintf("  %s %s — would free %s",
+				dimStyle.Render("~"), name, sizeStyle.Render(cleaner.HumanBytes(r.freed)))
+		default:
+			line = fmt.Sprintf("  %s %s — freed %s",
+				checkedStyle.Render("✓"), name, sizeStyle.Render(cleaner.HumanBytes(r.freed)))
+		}
+		rows = append(rows, line)
+	}
+
+	body := "\n  " + titleStyle.Render(" dust ") + "\n\n  " + header + "\n\n" + strings.Join(rows, "\n")
+	body += "\n\n  " + dimStyle.Render("Press any key to continue.")
+	return body
+}
+
+// lookupName returns the cleaner Name() for an itemID, or the ID itself if
+// unknown (covers the case where the rescan dropped the cleaner).
+func (m Model) lookupName(id string) string {
+	for _, c := range m.categories {
+		for _, it := range c.items {
+			if it.c.ID() == id {
+				return it.c.Name()
+			}
+		}
+	}
+	return id
 }
 
 func (m Model) renderHelp() string {
